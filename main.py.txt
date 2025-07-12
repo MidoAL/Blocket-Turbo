@@ -1,0 +1,41 @@
+import requests
+from bs4 import BeautifulSoup
+from datetime import datetime
+
+# ---- Inställningar ----
+KEYWORDS = ["rost", "obes", "felkod", "småfel", "små fel", "projekt", "besikt", "sliten", "motorfel"]
+MAX_PRIS = 15000
+BLOCKET_URL = f"https://www.blocket.se/annonser/hela_sverige/fordon/bilar?cg=1020&st=s&ps=0&pe={MAX_PRIS}"
+
+HEADERS = {"User-Agent": "Mozilla/5.0"}
+
+def hitta_annons_urler():
+    response = requests.get(BLOCKET_URL, headers=HEADERS)
+    soup = BeautifulSoup(response.text, "html.parser")
+    annonser = soup.find_all("a", href=True)
+    
+    matchningar = []
+
+    for annons in annonser:
+        text = annons.get_text().lower()
+        url = "https://www.blocket.se" + annons["href"]
+
+        if any(keyword in text for keyword in KEYWORDS):
+            matchningar.append((text.strip(), url))
+
+    return matchningar
+
+def spara_resultat(annonser):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    with open("resultat.txt", "a", encoding="utf-8") as f:
+        f.write(f"\n--- {timestamp} ---\n")
+        for titel, url in annonser:
+            f.write(f"{titel}\n{url}\n\n")
+
+if __name__ == "__main__":
+    resultat = hitta_annons_urler()
+    if resultat:
+        print(f"Hittade {len(resultat)} potentiella bilar!")
+        spara_resultat(resultat)
+    else:
+        print("Inga matchande annonser hittades.")

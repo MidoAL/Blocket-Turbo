@@ -1,3 +1,4 @@
+import os
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -19,23 +20,27 @@ def hitta_annons_urler():
     for annons in annonser:
         text = annons.get_text().lower()
         url = "https://www.blocket.se" + annons["href"]
-
         if any(keyword in text for keyword in KEYWORDS):
             matchningar.append((text.strip(), url))
 
     return matchningar
 
-def spara_resultat(annonser):
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    with open("resultat.txt", "a", encoding="utf-8") as f:
-        f.write(f"\n--- {timestamp} ---\n")
-        for titel, url in annonser:
-            f.write(f"{titel}\n{url}\n\n")
+def skicka_telegram_meddelande(meddelande):
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    data = {
+        "chat_id": chat_id,
+        "text": meddelande,
+        "disable_web_page_preview": True,
+    }
+    requests.post(url, data=data)
 
 if __name__ == "__main__":
     resultat = hitta_annons_urler()
     if resultat:
-        print(f"Hittade {len(resultat)} potentiella bilar!")
-        spara_resultat(resultat)
+        for titel, url in resultat:
+            meddelande = f"{titel}\n{url}"
+            skicka_telegram_meddelande(meddelande)
     else:
         print("Inga matchande annonser hittades.")
